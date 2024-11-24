@@ -1,0 +1,45 @@
+---
+title: "STAT6101Project"
+output: pdf_document
+date: "2024-11-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# STAT6101 Final Project
+
+## Uniform Case
+
+```{r}
+
+p_unif <- sort(runif(1000, min = 0, max = 1))
+
+# budget is allowed budget, method is the type of shifting
+# allowed method types: 
+  # shifting as many people to 1 as much as the budget allows
+  # shifting everyone an equal amount
+  # shifting a section of people in the middle to a certain threshold...?
+shift_probs <- function(probs, budget, method) {
+  
+  if (method == "max") {
+    
+    i = 1000;
+    while (budget >= (1 - probs[i])^2) {
+      budget = budget - (1 - probs[i])^2
+      probs[i] = 1
+      i = i -1
+    }
+    
+  } else if (method == "uniform") {
+    n <- length(probs)
+    add_prob <- sqrt(budget / n)
+    
+    probs = pmin(probs + add_prob, 1)
+  }
+  
+  return(probs)
+}
+
+```
