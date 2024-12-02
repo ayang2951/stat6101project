@@ -63,7 +63,7 @@ shift_probs <- function(probs, budget, method) {
   probs <- sort(probs)
   
   i = length(probs)
-  while (budget > 0) {
+  while (budget > ((probs[i])(1 - probs[i]))^2) {
     budget = budget - ((probs[i])(1 - probs[i]))^2
     probs[i] = 1
     i = i - 1
@@ -73,3 +73,82 @@ shift_probs <- function(probs, budget, method) {
 }
 
 ```
+uniform with cost x^2t^2
+
+```{r}
+
+shift_probs_max <- function(probs, budget, method) {
+  
+  probs <- sort(probs)
+  
+  i = length(probs)
+  while (budget > ((probs[i])(1 - probs[i]))^2) {
+    budget = budget - ((probs[i])(1 - probs[i]))^2
+    probs[i] = 1
+    i = i - 1
+  }
+  
+  return(probs)
+}
+
+shift_probs_mid <- function(probs, budget, threshold) {
+  
+  probs <- sort(probs)
+  
+  i = floor(length(probs) / 2)
+  while (budget > ((probs[i])(1 - probs[i]))^2) {
+    budget = budget - ((probs[i])(1 - probs[i]))^2
+    probs[i] = 1
+    i = i - 1
+  }
+  
+  return(probs)
+}
+
+
+
+```
+
+```{r}
+
+shift_probs_thresh <- function(probs, budget, threshold) {
+  
+  probs <- sort(probs)
+  
+  i = length(probs)
+  
+  for (j in 1:length(probs)) {
+    if (probs[j] > threshold) {
+      i = j - 1
+      break
+    }
+  }
+  
+  while (budget > ((probs[i]) * (threshold - probs[i]))^2) {
+    budget <- budget - ((probs[i]) * (threshold - probs[i]))^2
+    probs[i] = threshold
+    i = i - 1
+    if (i == 0) {
+      break
+    }
+  }
+  
+  return(probs)
+}
+
+probs <- shift_probs_thresh(data, 10, 1)
+
+optimize <- seq(0.1, 1, 0.01)
+vals <- rep(0, length(optimize))
+
+for (i in 1:length(optimize)) {
+  data <- runif(1000, min = 0, max = 1)
+  
+  probs_i <- shift_probs_thresh(data, 10, optimize[i])
+  vals[i] <- sum(probs_i)
+}
+
+plot(cbind(optimize, vals))
+```
+
+
