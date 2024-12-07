@@ -56,7 +56,7 @@ shifting people depending on their existing position
 beta_mix <- c(rbeta(500, 10, 30), 1 - rbeta(500, 10, 30))
 hist(beta_mix, breaks = 50)
 
-# cost function: x(y - x)^2, x|y - x|, ((x - 0.5)(y - x))^2, |x - 0.5|(y - x)^2
+# cost function: x^2(y - x)^2, x|y - x|, ((x - 0.5)(y - x))^2, |x - 0.5|(y - x)^2
 
 shift_probs <- function(probs, budget, method) {
   
@@ -109,6 +109,10 @@ shift_probs_mid <- function(probs, budget, threshold) {
 
 ```
 
+uniform case, x^2t^2 cost, linear probability mapping
+
+-- we find the threshold at which we should start moving people to the threshold
+
 ```{r}
 
 shift_probs_thresh <- function(probs, budget, threshold) {
@@ -138,7 +142,7 @@ shift_probs_thresh <- function(probs, budget, threshold) {
 
 probs <- shift_probs_thresh(data, 10, 1)
 
-optimize <- seq(0.1, 1, 0.01)
+optimize <- seq(0.5, 1, 0.01)
 vals <- rep(0, length(optimize))
 
 for (i in 1:length(optimize)) {
@@ -151,4 +155,155 @@ for (i in 1:length(optimize)) {
 plot(cbind(optimize, vals))
 ```
 
+```{r}
+
+# beta_mix <- c(rbeta(500, 10, 30), 1 - rbeta(500, 10, 30))
+
+beta_mix <- c(rbeta(300, 13, 30), 1 - rbeta(700, 13, 30))
+hist(beta_mix, breaks = 50)
+
+print(sum(shift_probs_thresh_left(beta_mix, 10, 0.5)))
+print(sum(shift_probs_thresh(beta_mix, 10, 0.5)))
+
+# optimize <- seq(0.5, 1, 0.01)
+# vals <- rep(0, length(optimize))
+# 
+# for (i in 1:length(optimize)) {
+#   data <- c(rbeta(300, 13, 30), 1 - rbeta(700, 13, 30))
+#   
+#   probs_i <- shift_probs_thresh_left(data, 10, optimize[i])
+#   vals[i] <- sum(probs_i)
+# }
+# 
+# plot(cbind(optimize, vals))
+
+
+```
+
+```{r}
+
+optimize <- seq(0.5, 1, 0.01)
+vals <- rep(0, length(optimize))
+
+for (i in 1:length(optimize)) {
+  data <- c(rbeta(500, 30, 30), 1 - rbeta(500, 30, 30))
+  
+  probs_i <- shift_probs_thresh(data, 10, optimize[i])
+  vals[i] <- sum(probs_i)
+}
+
+plot(cbind(optimize, vals))
+
+```
+
+```{r}
+
+optimize <- seq(0.5, 1, 0.01)
+vals <- rep(0, length(optimize))
+
+for (i in 1:length(optimize)) {
+  data <- c(rbeta(500, 10, 30), 1 - rbeta(500, 10, 30))
+  
+  probs_i <- shift_probs_thresh(data, 10, optimize[i])
+  vals[i] <- sum(probs_i)
+}
+
+plot(cbind(optimize, vals))
+
+```
+
+
+```{r}
+
+shift_probs_thresh_left <- function(probs, budget, threshold) {
+  
+  probs <- sort(probs)
+  
+  # i = length(probs)
+  # 
+  # for (j in 1:length(probs)) {
+  #   if (probs[j] > threshold) {
+  #     i = j - 1
+  #     break
+  #   }
+  # }
+  
+  i = 1
+  
+  while (budget > ((probs[i]) * (threshold - probs[i]))^2) {
+    budget <- budget - ((probs[i]) * (threshold - probs[i]))^2
+    probs[i] = threshold
+    i = i + 1
+    if (i == length(probs)) {
+      break
+    }
+  }
+  
+  return(probs)
+}
+
+data1 <- rbeta(500, 10, 30)
+data2 <- rbeta(1000, 40, 30)
+
+haha1 <- sum(shift_probs_thresh_left(data1, 10, 0.8)) - sum(data1)
+haha2 <- sum(shift_probs_thresh_left(data2, 10, 0.8)) - sum(data2)
+
+# probs <- shift_probs_thresh(data, 10, 1)
+# 
+# optimize <- seq(0.5, 1, 0.01)
+# vals <- rep(0, length(optimize))
+# 
+# for (i in 1:length(optimize)) {
+#   data <- runif(1000, min = 0, max = 1)
+#   
+#   probs_i <- shift_probs_thresh(data, 10, optimize[i])
+#   vals[i] <- sum(probs_i)
+# }
+# 
+# plot(cbind(optimize, vals))
+
+```
+
+
+```{r}
+
+shift_probs_thresh_1 <- function(probs, budget, threshold) {
+  
+  probs <- sort(probs)
+  
+  i = length(probs)
+  
+  for (j in 1:length(probs)) {
+    if (probs[j] > threshold) {
+      i = j - 1
+      break
+    }
+  }
+  
+  while (budget > ((probs[i]) * (threshold - probs[i]))^2) {
+    budget <- budget - ((probs[i]) * (threshold - probs[i]))^2
+    probs[i] = threshold
+    i = i - 1
+    if (i == 0) {
+      break
+    }
+  }
+  
+  return(probs^2)
+}
+
+
+optimize <- seq(0.5, 1, 0.01)
+vals <- rep(0, length(optimize))
+
+for (i in 1:length(optimize)) {
+  data <- runif(1000, min = 0, max = 1)
+  
+  probs_i <- shift_probs_thresh_left(data, 8, optimize[i])
+  vals[i] <- sum(probs_i)
+}
+
+plot(cbind(optimize, vals))
+
+```
 
