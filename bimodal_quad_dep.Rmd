@@ -1,0 +1,74 @@
+---
+title: "Optimal Shift in Distributions"
+output: html_document
+date: "2024-12-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+uniform_distribution <- rbeta(1000, shape1 = 1, shape2 = 1)
+sorted_uniform <- sort(uniform_distribution)
+
+centeral_distribution <- rbeta(1000, shape1 = 10, shape2 = 10)
+sorted_central <- sort(centeral_distribution)
+
+mixture_indicator <- rbinom(1000, size = 1, prob = 0.5)
+bimodal_distribution <- ifelse(mixture_indicator == 0, 
+                  rbeta(1000, shape1 = 5, shape2 = 20), 
+                  rbeta(1000, shape1 = 20, shape2 = 5))
+sorted_bimodal <- sort(bimodal_distribution)
+```
+
+```{r}
+uniform_lower_end_shift_benefit <- function(distribution, x) {
+  old_value <- sum(distribution^2)
+  distribution[11:490] <- distribution[11:490] + x
+  new_value <- sum(distribution^2)
+  gain <- (new_value-old_value)/1000
+  return(gain)
+}
+```
+
+```{r}
+uniform_lower_end_shift_cost <- function(distribution, x) {
+  distribution[11:490] <- distribution[11:490] + x
+  cost <- sum(distribution[11:490] * x)/1000
+  return(cost)
+}
+```
+
+```{r}
+uniform_upper_end_shift_benefit <- function(distribution, x) {
+  old_value <- sum(distribution^2)
+  distribution[511:990] <- distribution[511:990] + x
+  new_value <- sum(distribution^2)
+  gain <- (new_value-old_value)/1000
+  return(gain)
+}
+```
+
+```{r}
+uniform_upper_end_shift_cost <- function(distribution, x) {
+  distribution[511:990] <- distribution[511:990] + x
+  cost <- sum(distribution[511:990] * x)/1000
+  return(cost)
+}
+```
+
+
+```{r}
+uniform_lower_end_shift_benefit(bimodal_distribution, 0.01)
+uniform_upper_end_shift_benefit(bimodal_distribution, 0.01)
+uniform_lower_end_shift_cost(bimodal_distribution, 0.01)
+uniform_upper_end_shift_cost(bimodal_distribution, 0.01)
+```
+
+```{r}
+uniform_lower_end_shift_benefit(bimodal_distribution, 0.01)-uniform_lower_end_shift_cost(bimodal_distribution, 0.01)
+uniform_upper_end_shift_benefit(bimodal_distribution, 0.01)-uniform_upper_end_shift_cost(bimodal_distribution, 0.01)
+```
+
