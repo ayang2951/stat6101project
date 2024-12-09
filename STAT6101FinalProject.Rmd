@@ -45,32 +45,15 @@ shift_probs <- function(probs, budget, method) {
 
 ```
 
-shifting people away from 0
-shifting one mode further vs the other
-shifting people depending on their existing position
-  eg linear
-  quadratic probabilities makes shifting higher probabilities more make more sense
+generating different bimodal distributions
 
 ```{r}
 
 beta_mix <- c(rbeta(500, 10, 30), 1 - rbeta(500, 10, 30))
 hist(beta_mix, breaks = 50)
 
-# cost function: x^2(y - x)^2, x|y - x|, ((x - 0.5)(y - x))^2, |x - 0.5|(y - x)^2
-
-shift_probs <- function(probs, budget, method) {
-  
-  probs <- sort(probs)
-  
-  i = length(probs)
-  while (budget > ((probs[i])(1 - probs[i]))^2) {
-    budget = budget - ((probs[i])(1 - probs[i]))^2
-    probs[i] = 1
-    i = i - 1
-  }
-  
-  return(probs)
-}
+beta_mix <- c(rbeta(300, 13, 30), 1 - rbeta(700, 13, 30))
+hist(beta_mix, breaks = 50)
 
 ```
 uniform with cost x^2t^2
@@ -106,7 +89,6 @@ shift_probs_mid <- function(probs, budget, threshold) {
 }
 
 
-
 ```
 
 uniform case, x^2t^2 cost, linear probability mapping
@@ -128,8 +110,8 @@ shift_probs_thresh <- function(probs, budget, threshold) {
     }
   }
   
-  while (budget > ((probs[i]) * (threshold - probs[i]))^2) {
-    budget <- budget - ((probs[i]) * (threshold - probs[i]))^2
+  while (budget > ((probs[i]) * (threshold - probs[i]))) {
+    budget <- budget - ((probs[i]) * (threshold - probs[i]))
     probs[i] = threshold
     i = i - 1
     if (i == 0) {
@@ -140,62 +122,104 @@ shift_probs_thresh <- function(probs, budget, threshold) {
   return(probs)
 }
 
-probs <- shift_probs_thresh(data, 10, 1)
 
-optimize <- seq(0.5, 1, 0.01)
-vals <- rep(0, length(optimize))
-
-for (i in 1:length(optimize)) {
-  data <- runif(1000, min = 0, max = 1)
+shift_probs_thresh_left <- function(probs, budget, threshold) {
   
-  probs_i <- shift_probs_thresh(data, 10, optimize[i])
-  vals[i] <- sum(probs_i)
+  probs <- sort(probs)
+  
+  i = 1
+  while (budget > ((probs[i]) * (threshold - probs[i]))) {
+    budget <- budget - ((probs[i]) * (threshold - probs[i]))
+    probs[i] = threshold
+    i = i + 1
+    if (i == length(probs)) {
+      break
+    }
+  }
+  
+  return(probs)
 }
 
-plot(cbind(optimize, vals))
+
+shift_probs_unif <- function(probs, budget, threshold) {
+  
+  probs <- sort(probs)
+  n <- length(probs)
+  
+  total <- sum(probs[threshold:n])
+  shift <- budget / total
+  
+  add <- c(rep(0, threshold - 1), rep(shift, n - threshold + 1))
+  
+  probs = pmin(probs + add, 1)
+  
+}
+
+shift_probs_unif_left <- function(probs, budget, threshold) {
+  
+  probs <- sort(probs)
+  n <- length(probs)
+  
+  total <- sum(probs[1:threshold - 1])
+  shift <- budget / total
+  
+  add <- c(rep(0, threshold - 1), rep(shift, n - threshold + 1))
+  
+  probs = pmin(probs + add, 1)
+  
+}
+
 ```
 
 ```{r}
 
-# beta_mix <- c(rbeta(500, 10, 30), 1 - rbeta(500, 10, 30))
+beta_mix <- c(rbeta(500, 13, 30), 1 - rbeta(500, 13, 30))
+unif_dist <- runif(1000, min = 0, max = 1)
 
-beta_mix <- c(rbeta(300, 13, 30), 1 - rbeta(700, 13, 30))
-hist(beta_mix, breaks = 50)
-
-print(sum(shift_probs_thresh_left(beta_mix, 10, 0.5)))
-print(sum(shift_probs_thresh(beta_mix, 10, 0.5)))
-
-# optimize <- seq(0.5, 1, 0.01)
-# vals <- rep(0, length(optimize))
+# print(sum(shift_probs_thresh_left(beta_mix, 10, 0.7)^2))
+# print(sum(shift_probs_thresh(beta_mix, 10, 0.7)^2))
+# print(sum(shift_probs_unif(beta_mix, 10, 500)^2))
+# print(sum(shift_probs_unif_left(beta_mix, 10, 500)^2))
 # 
-# for (i in 1:length(optimize)) {
-#   data <- c(rbeta(300, 13, 30), 1 - rbeta(700, 13, 30))
-#   
-#   probs_i <- shift_probs_thresh_left(data, 10, optimize[i])
-#   vals[i] <- sum(probs_i)
-# }
-# 
-# plot(cbind(optimize, vals))
+# print(sum(shift_probs_thresh_left(unif_dist, 10, 0.7)^2))
+# print(sum(shift_probs_thresh(unif_dist, 10, 0.7)^2))
+# print(sum(shift_probs_unif(unif_dist, 10, 500)^2))
+# print(sum(shift_probs_unif_left(unif_dist, 10, 500)^2))
 
+library(ggplot2)
+
+# Data preparation
+data <- data.frame(
+  Strategy = rep(c("Threshold Start Left", "Threshold Start Right", "Uniform Lower Mode", "Uniform Higher Mode"), 2),
+  Value = c(336.2085, 315.5381, 314.0046, 342.106, 
+            423.2671, 352.3738, 350.0487, 389.3801),
+  Distribution = rep(c("Bimodal", "Uniform"), each = 4)
+)
+
+# Plotting
+ggplot(data, aes(x = Strategy, y = Value, fill = Distribution)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Shifting Strategies by Distribution Type",
+       x = "Shifting Strategy",
+       y = "Value") +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data, aes(x = Strategy, y = Value, fill = Distribution)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Shifting Strategies by Distribution Type",
+       x = "Shifting Strategy",
+       y = "Benefit") +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5), # Horizontal x-axis labels
+    axis.title.x = element_text(margin = margin(t = 10)), # Add space between x-axis title and labels
+    plot.title = element_text(hjust = 0.5) # Center the title
+  )
 
 ```
-
-```{r}
-
-optimize <- seq(0.5, 1, 0.01)
-vals <- rep(0, length(optimize))
-
-for (i in 1:length(optimize)) {
-  data <- c(rbeta(500, 30, 30), 1 - rbeta(500, 30, 30))
-  
-  probs_i <- shift_probs_thresh(data, 10, optimize[i])
-  vals[i] <- sum(probs_i)
-}
-
-plot(cbind(optimize, vals))
-
-```
-
 ```{r}
 
 optimize <- seq(0.5, 1, 0.01)
@@ -210,60 +234,48 @@ for (i in 1:length(optimize)) {
 
 plot(cbind(optimize, vals))
 
+data <- c(rbeta(500, 10, 30), 1 - rbeta(500, 10, 30))
+new_probs <- shift_probs_thresh(data, 20, 0.7)
+
+hist(data, xlim = c(0, 1), breaks = 50, xlab = "x-Values", main = "Start Left")
+hist(new_probs, xlim = c(0, 1), breaks = 50, xlab = 'x-Values', main = "Shifted Distribution")
+
 ```
 
+comparison of thresholds in binomdal from beta case
 
 ```{r}
 
-shift_probs_thresh_left <- function(probs, budget, threshold) {
+optimize <- seq(0.5, 1, 0.01)
+vals <- rep(0, length(optimize))
+
+for (i in 1:length(optimize)) {
+  data <- c(rbeta(500, 30, 30), 1 - rbeta(500, 30, 30))
   
-  probs <- sort(probs)
-  
-  # i = length(probs)
-  # 
-  # for (j in 1:length(probs)) {
-  #   if (probs[j] > threshold) {
-  #     i = j - 1
-  #     break
-  #   }
-  # }
-  
-  i = 1
-  
-  while (budget > ((probs[i]) * (threshold - probs[i]))^2) {
-    budget <- budget - ((probs[i]) * (threshold - probs[i]))^2
-    probs[i] = threshold
-    i = i + 1
-    if (i == length(probs)) {
-      break
-    }
-  }
-  
-  return(probs)
+  probs_i <- shift_probs_thresh_left(data, 80, optimize[i])
+  vals[i] <- sum(probs_i)
 }
 
-data1 <- rbeta(500, 10, 30)
-data2 <- rbeta(1000, 40, 30)
-
-haha1 <- sum(shift_probs_thresh_left(data1, 10, 0.8)) - sum(data1)
-haha2 <- sum(shift_probs_thresh_left(data2, 10, 0.8)) - sum(data2)
-
-# probs <- shift_probs_thresh(data, 10, 1)
-# 
-# optimize <- seq(0.5, 1, 0.01)
-# vals <- rep(0, length(optimize))
-# 
-# for (i in 1:length(optimize)) {
-#   data <- runif(1000, min = 0, max = 1)
-#   
-#   probs_i <- shift_probs_thresh(data, 10, optimize[i])
-#   vals[i] <- sum(probs_i)
-# }
-# 
-# plot(cbind(optimize, vals))
+plot(cbind(optimize, vals), xlab = "Threshold Values", ylab = "Benefit", main = "Bimodal Distribution")
 
 ```
+uniform distribution case 
+```{r}
 
+optimize <- seq(0.5, 1, 0.01)
+vals <- rep(0, length(optimize))
+
+for (i in 1:length(optimize)) {
+  data <- c(runif(1000, min = 0, max = 1))
+  
+  probs_i <- shift_probs_thresh(data, 50, optimize[i])
+  vals[i] <- sum(probs_i)
+}
+
+#hist(data, breaks = 20, xlab = "Initial x-Values")
+plot(cbind(optimize, vals), xlab = "Threshold Values", ylab = "Benefit", main = "Uniform Distribution")
+
+```
 
 ```{r}
 
